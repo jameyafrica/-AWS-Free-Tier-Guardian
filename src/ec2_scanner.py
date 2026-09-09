@@ -6,6 +6,18 @@ import boto3
 # an API for "is this type free tier eligible?" So we maintain it ourselves.
 FREE_TIER_INSTANCE_TYPES = ["t2.micro", "t3.micro"]
 
+
+def is_instance_free_tier_eligible(instance_type):
+    """
+    Pure function: given an EC2 instance type string, returns True if it's
+    on the Free Tier allow-list, False otherwise.
+
+    No network calls, no side effects — same input always gives the same
+    output. This is what makes it safely unit-testable without mocking AWS.
+    """
+    return instance_type in FREE_TIER_INSTANCE_TYPES
+
+
 def get_running_instances(region="us-east-1"):
     """
     Scans the given AWS region for EC2 instances currently in the 'running' state.
@@ -28,7 +40,7 @@ def get_running_instances(region="us-east-1"):
                     "id": instance["InstanceId"],
                     "type": instance["InstanceType"],
                     "region": region,
-                    "is_free_tier_eligible": instance["InstanceType"] in FREE_TIER_INSTANCE_TYPES
+                    "is_free_tier_eligible": is_instance_free_tier_eligible(instance["InstanceType"])
                 })
 
     return running_instances
