@@ -1,5 +1,6 @@
 import boto3
 
+FREE_TIER_S3_LIMIT_GB = 5.0
 
 def get_bucket_summary():
     """
