@@ -25,6 +25,8 @@ def get_bucket_summary():
             - "size_gb": total size of all objects in the bucket, in GB,
               rounded to 2 decimal places (float)
             - "object_count": number of objects in the bucket (int)
+                        - "over_free_tier_limit": True if the bucket's size is strictly
+              greater than FREE_TIER_S3_LIMIT_GB, otherwise False (bool)
         Returns an empty list if the account has no buckets.
     """
     s3 = boto3.client("s3")
@@ -53,12 +55,14 @@ def get_bucket_summary():
                 object_count += 1
 
         # Convert bytes -> GB (1024^3 bytes per GB), rounded per the AC
-        size_gb = round(total_size_bytes / (1024 ** 3), 2)
+        raw_size_gb = total_size_bytes / (1024 ** 3)
+        size_gb = round(raw_size_gb, 2)
 
         summaries.append({
             "name": bucket_name,
             "size_gb": size_gb,
             "object_count": object_count,
+            "over_free_tier_limit": is_over_free_tier_limit(raw_size_gb),
         })
 
     return summaries
