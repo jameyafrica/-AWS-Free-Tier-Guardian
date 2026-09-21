@@ -2,6 +2,19 @@ import boto3
 
 FREE_TIER_S3_LIMIT_GB = 5.0
 
+def is_over_free_tier_limit(size_gb):
+    """
+    Checks whether a bucket's size is over the S3 Free Tier storage limit.
+
+    Args:
+        size_gb (float): the bucket's total size in GB.
+
+    Returns:
+        bool: True if size_gb is strictly greater than FREE_TIER_S3_LIMIT_GB,
+        False otherwise (including exactly at the limit).
+    """
+    return size_gb > FREE_TIER_S3_LIMIT_GB
+
 def get_bucket_summary():
     """
     Scans all S3 buckets in the AWS account and summarizes each one.
