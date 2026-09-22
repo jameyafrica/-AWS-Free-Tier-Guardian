@@ -66,3 +66,4 @@ def get_bucket_summary():
         })
 
     return summaries
+
