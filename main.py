@@ -3,6 +3,7 @@ from botocore.exceptions import ClientError, NoCredentialsError
 from src.ec2_scanner import get_running_instances
 from src.s3_scanner import get_bucket_summary
 from src.report_formatter import format_ec2_table, format_s3_table
+from src.risk_summary import calculate_total_risk
 import re
 import argparse
 
@@ -27,20 +28,13 @@ def build_report(ec2_results, s3_results):
     """
     Combines EC2 and S3 scan results into a single report dict.
     """
-    risky_ec2_count = sum(
-        1 for instance in ec2_results
-        if not instance["is_free_tier_eligible"]
-    )
-    risky_s3_count = sum(
-        1 for bucket in s3_results
-        if bucket["over_free_tier_limit"]
-    )
+    total_risk = calculate_total_risk(ec2_results, s3_results)
 
     return {
         "ec2": ec2_results,
         "s3": s3_results,
         "summary": {
-            "total_risky_resources": risky_ec2_count + risky_s3_count,
+            "total_risky_resources": total_risk,
         },
     }
 
@@ -58,7 +52,14 @@ def main():
         print(format_s3_table(buckets))
 
         report = build_report(instances, buckets)
-        print(f"\nTotal risky resources: {report['summary']['total_risky_resources']}")
+        total_risk = report["summary"]["total_risky_resources"]
+
+        if total_risk > 0:
+            print(f"\nRISK FOUND: {total_risk} resource(s) may incur Free Tier charges.")
+            sys.exit(1)
+        else:
+            print("\nALL CLEAR: account is fully within Free Tier limits.")
+            sys.exit(0)
 
     except NoCredentialsError:
         print("AWS credentials not found — run `aws configure` to set them up.")
