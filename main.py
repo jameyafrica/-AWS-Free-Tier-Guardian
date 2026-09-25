@@ -1,6 +1,8 @@
-from botocore.exceptions import ClientError
+﻿import sys
+from botocore.exceptions import ClientError, NoCredentialsError
 from src.ec2_scanner import get_running_instances
 from src.s3_scanner import get_bucket_summary
+from src.report_formatter import format_ec2_table, format_s3_table
 import re
 import argparse
 
@@ -24,16 +26,6 @@ def valid_region_format(region_string):
 def build_report(ec2_results, s3_results):
     """
     Combines EC2 and S3 scan results into a single report dict.
-
-    Args:
-        ec2_results: list of dicts from get_running_instances()
-        s3_results: list of dicts from get_bucket_summary()
-
-    Returns:
-        dict with keys "ec2", "s3", and "summary". "summary" contains
-        a single int, total_risky_resources: count of EC2 instances
-        that are NOT free-tier-eligible, plus S3 buckets flagged
-        over_free_tier_limit.
     """
     risky_ec2_count = sum(
         1 for instance in ec2_results
@@ -60,31 +52,22 @@ def main():
 
     try:
         instances = get_running_instances()
-
-        if not instances:
-            print("No running EC2 instances found")
-        else:
-            print(f"Found {len(instances)} running EC2 instance(s):")
-            for instance in instances:
-                print(f"  - {instance['id']} ({instance['type']}) in {instance['region']} "
-                      f"| Free Tier eligible: {instance['is_free_tier_eligible']}")
+        print(format_ec2_table(instances))
 
         buckets = get_bucket_summary()
-
-        if not buckets:
-            print("No S3 buckets found")
-        else:
-            print(f"Found {len(buckets)} S3 bucket(s):")
-            for bucket in buckets:
-                print(f"  - {bucket['name']} ({bucket['size_gb']} GB, {bucket['object_count']} objects) "
-                      f"| Over Free Tier limit: {bucket['over_free_tier_limit']}")
+        print(format_s3_table(buckets))
 
         report = build_report(instances, buckets)
         print(f"\nTotal risky resources: {report['summary']['total_risky_resources']}")
 
+    except NoCredentialsError:
+        print("AWS credentials not found — run `aws configure` to set them up.")
+        sys.exit(1)
+
     except ClientError as e:
-        print("AWS rejected this request — likely a permissions issue.")
+        print("AWS rejected this request — check the IAM policy attached to 'free-tier-guardian-bot'.")
         print(f"Details: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
