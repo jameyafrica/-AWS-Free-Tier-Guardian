@@ -70,3 +70,7 @@ python main.py --region eu-west-1
 ```
 
 **Example output** (real, sanitized run against a test account):
+
+Verification code:
+
+WTC-2UF9VBAF
